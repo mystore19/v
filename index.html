@@ -9,45 +9,45 @@
 body { font-family: Arial, sans-serif; margin:0; background:#f8fafc; }
 header { background:#0f172a; color:#fff; padding:1rem; text-align:center; }
 
-/* SEARCH + FILTER */
 .controls { display:flex; gap:8px; padding:10px; background:#fff; position:sticky; top:0; z-index:10; }
 .controls input, .controls select { padding:10px; flex:1; border-radius:8px; border:1px solid #cbd5e1; }
 
-/* PRODUCT GRID */
-.catalog { padding:1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem; }
-.product { background:#fff; border-radius:12px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.08); display:flex; flex-direction:column; }
-.product img { width:100%; height:160px; object-fit:cover; border-radius:10px; }
-.product h3 { font-size:1.05rem; margin:6px 0; }
-.meta { font-size:.8rem; color:#64748b; }
-.price { margin:6px 0; }
-.qty-box { display:flex; align-items:center; gap:10px; margin:6px 0; }
-.qty-box button { padding:8px 12px; font-size:1rem; cursor:pointer; }
-.btn { background:#25d366; color:#fff; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+.catalog { padding:1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
+
+.product { background:#fff; border-radius:12px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.08); display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; }
+.product img { width:100%; height:180px; object-fit:cover; border-radius:10px; }
+.product h3 { font-size:1.1rem; margin:6px 0; }
+.meta { font-size:.85rem; color:#64748b; margin-bottom:6px; }
+.price { margin:6px 0; font-weight:bold; }
+.select-row { display:flex; justify-content:space-between; gap:5px; width:100%; margin:6px 0; }
+.select-row select { flex:1; padding:6px; border-radius:6px; border:1px solid #cbd5e1; }
+
+.qty-box { display:flex; align-items:center; gap:8px; margin:6px 0; }
+.qty-box button { padding:6px 10px; font-size:1rem; cursor:pointer; }
+.btn { background:#25d366; color:#fff; padding:10px 12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:90%; }
+
 .cart-btn { position:fixed; bottom:20px; right:20px; background:#0f172a; color:#fff; padding:16px 20px; border-radius:40px; border:none; z-index:200; font-weight:bold; }
 
-/* CART SIDEBAR / DRAWER */
 #cartSidebar { position:fixed; top:0; right:-420px; width:380px; height:100%; background:#fff; box-shadow:-8px 0 30px rgba(0,0,0,.25); z-index:1000; transition:right .35s ease; display:flex; flex-direction:column; }
 #cartSidebar.open { right:0; }
 #cartBox { flex:1; overflow-y:auto; padding:1rem; }
 #cartBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:.3s; z-index:900; }
 #cartSidebar.open ~ #cartBackdrop { opacity:1; pointer-events:auto; }
-#checkoutBtn { width:100%; padding:14px; font-size:1.05rem; margin-top:10px; background:#25d366; color:#fff; border:none; cursor:pointer; }
+#checkoutBtn { width:100%; padding:14px; font-size:1.05rem; margin-top:10px; cursor:pointer; background:#25d366; color:#fff; border:none; }
 
-/* MOBILE CART */
 @media(max-width:600px){ #cartSidebar{ width:100%; height:85%; bottom:-100%; top:auto; right:0; border-radius:16px 16px 0 0; transition:bottom .35s ease; } #cartSidebar.open{ bottom:0; } }
 
-/* TOAST */
 #toast { position:fixed; bottom:120px; right:20px; background:#25d366; color:#fff; padding:12px 18px; border-radius:8px; opacity:0; transition:.3s; }
 #toast.show { opacity:1; }
 
-/* STOCK BADGES */
-.badge { padding:4px 8px; border-radius:5px; font-size:12px; color:#fff; display:inline-block; margin-bottom:6px; }
+.badge { padding:4px 8px; border-radius:5px; font-size:12px; color:#fff; display:inline-block; margin-bottom:6px; position:absolute; top:10px; left:10px; }
 .low { background:orange; }
-.out { background:red; }
+.out { background:red; animation:flash 0.7s; }
+@keyframes flash { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
 .qty-btn { width:30px; padding:2px 5px; font-weight:bold; margin:0 4px; }
 </style>
 </head>
-
 <body>
 
 <header>
@@ -70,7 +70,6 @@ header { background:#0f172a; color:#fff; padding:1rem; text-align:center; }
 <button class="cart-btn" onclick="openCart()">🛒 Cart (<span id="cartCount">0</span>)</button>
 <div id="toast">Added to cart</div>
 
-<!-- CART -->
 <div id="cartSidebar">
   <div id="cartBox">
     <h3>Your Cart</h3>
@@ -94,31 +93,23 @@ header { background:#0f172a; color:#fff; padding:1rem; text-align:center; }
 const csvURL = "products.csv";
 const WHATSAPP_NUMBER = "2347057829344";
 const DELIVERY_FEE = 2500;
-
 let products=[], cart=[], qty={};
 
-// Load CSV
 fetch(csvURL).then(r=>r.text()).then(data=>{
   data.trim().split("\n").slice(1).forEach((r,i)=>{
     const [id,name,category,brand,price,colors,sizes,stock,image,discount]=r.split(",");
-    products.push({
-      id,name,category,brand,price:+price,colors:colors.split("|"),sizes:sizes.split("|"),
-      stock:+stock,image,discount:+discount||0
-    });
+    products.push({id,name,category,brand,price:+price,colors:colors.split("|"),sizes:sizes.split("|"),stock:+stock,image,discount:+discount||0});
     qty[i]=1;
   });
-
   loadCart();
   renderProducts(products);
   renderCart();
   updateCartCount();
 });
 
-// ---------------- CART PERSISTENCE ----------------
 function saveCart(){ localStorage.setItem("cartData",JSON.stringify(cart)); localStorage.setItem("stockData",JSON.stringify(products)); }
 function loadCart(){ const c=localStorage.getItem("cartData"); const s=localStorage.getItem("stockData"); if(c) cart=JSON.parse(c); if(s) products=JSON.parse(s); }
 
-// ---------------- PRODUCT RENDER ----------------
 function renderProducts(list){
   catalog.innerHTML="";
   list.forEach((p,i)=>{
@@ -132,9 +123,11 @@ function renderProducts(list){
         <img src="${p.image}">
         <h3>${p.name}</h3>
         <div class="meta">${p.brand} • ${p.category}</div>
-        <div class="price"><b>₦${price}</b></div>
-        <select id="color-${p.id}">${p.colors.map(c=>`<option>${c}</option>`).join("")}</select>
-        <select id="size-${p.id}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
+        <div class="price">₦${price}</div>
+        <div class="select-row">
+          <select id="size-${p.id}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
+          <select id="color-${p.id}">${p.colors.map(c=>`<option>${c}</option>`).join("")}</select>
+        </div>
         <div class="qty-box">
           <button onclick="chg(${i},-1)">➖</button>
           <span id="q${i}">${qty[i]}</span>
@@ -144,9 +137,9 @@ function renderProducts(list){
       </div>`;
   });
 }
+
 function chg(i,d){ qty[i]+=d; if(qty[i]<1) qty[i]=1; document.getElementById("q"+i).innerText=qty[i]; }
 
-// ---------------- CART FUNCTIONS ----------------
 function addToCart(i){
   const p = products[i];
   const color = document.getElementById(`color-${p.id}`).value;
@@ -187,6 +180,7 @@ function mod(i,d){
   if(item.qty<=0) cart.splice(i,1);
   renderProducts(products); renderCart(); updateCartCount(); saveCart();
 }
+
 function del(i){ const item=cart[i]; const p=products.find(x=>x.id==item.id); p.stock+=item.qty; cart.splice(i,1); renderProducts(products); renderCart(); updateCartCount(); saveCart(); }
 
 function openCart(){ cartSidebar.classList.add("open"); }
@@ -199,9 +193,17 @@ function checkoutWhatsApp(){
 
   let msg=`🧾 New Order%0AName: ${custName.value}%0APhone: ${custPhone.value}%0AAddress: ${custAddress.value}, ${custCity.value}%0ANote: ${custNote.value || "None"}%0A%0A`;
   cart.forEach((item,n)=>{ msg+=`${n+1}. ${item.name} (${item.color},${item.size}) x${item.qty} ₦${item.price*item.qty}%0A`; });
-  let subtotal=cart.reduce((a,b)=>a+b.price*b.qty,0);
-  msg+=`%0ATOTAL ₦${subtotal+DELIVERY_FEE}`;
+  let subtotal = cart.reduce((a,b)=>a+b.price*b.qty,0);
+  msg+=`%0ATOTAL ₦${subtotal + DELIVERY_FEE}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank");
+
+  // Update stock
+  cart.forEach(item=>{
+    const p = products.find(x=>x.id==item.id);
+    if(p) p.stock -= item.qty;
+    if(p.stock<0) p.stock=0;
+  });
+
   cart=[]; renderCart(); updateCartCount(); renderProducts(products); saveCart();
 }
 
