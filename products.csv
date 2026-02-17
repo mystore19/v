@@ -1,11 +1,11 @@
-id,name,category,price,colors,sizes,stock,image
-1,Plain T-Shirt,Clothing,8500,Black|White|Blue,S|M|L|XL,25,images/tshirt.jpg
-2,Hoodie Sweatshirt,Clothing,18500,Black|Gray|Brown,M|L|XL,12,images/hoodie.jpg
-3,Denim Jacket,Clothing,32000,Blue|Black,M|L|XL,6,images/jacket.jpg
-4,Summer Dress,Clothing,15000,Red|Yellow|Pink,S|M|L,18,images/dress.jpg
-5,Sneakers Pro,Shoes,42000,Black|White|Green,40|41|42|43|44,9,images/sneakers.jpg
-6,Running Trainers,Shoes,38000,Blue|Black,40|41|42|43,5,images/trainers.jpg
-7,Leather Shoes,Shoes,52000,Brown|Black,41|42|43|44|45,3,images/leather.jpg
-8,Canvas Shoes,Shoes,26000,White|Black|Red,39|40|41|42|43,20,images/canvas.jpg
-9,Knife,Kitchen,1500,Silver,OneSize,50,images/knife.jpg
-10,Spoon,Kitchen,1200,Silver,OneSize,50,images/spoon.jpg
+id,name,category,brand,price,colors,sizes,stock,image,discount
+1,T-Shirt,Clothing,ChiBrand,5000,Red|Blue|Black,S|M|L|XL,20,https://via.placeholder.com/200x160.png?text=T-Shirt,0
+2,Jeans,Clothing,ChiBrand,8000,Blue|Black,30|32|34|36,15,https://via.placeholder.com/200x160.png?text=Jeans,0
+3,Sneakers,Shoes,StepUp,12000,White|Black,8|9|10|11,10,https://via.placeholder.com/200x160.png?text=Sneakers,0
+4,Loafers,Shoes,StepUp,10000,Brown|Black,7|8|9|10,5,https://via.placeholder.com/200x160.png?text=Loafers,0
+5,Knife,Kitchen,CookMaster,1500,Silver,One Size,50,https://via.placeholder.com/200x160.png?text=Knife,0
+6,Spoon,Kitchen,CookMaster,1000,Silver,One Size,50,https://via.placeholder.com/200x160.png?text=Spoon,0
+7,Hoodie,Clothing,ChiBrand,9000,Red|Grey|Black,S|M|L|XL,8,https://via.placeholder.com/200x160.png?text=Hoodie,1000
+8,Running Shoes,Shoes,StepUp,14000,Blue|Black|White,8|9|10|11,2,https://via.placeholder.com/200x160.png?text=Running+Shoes,0
+9,Towel,Household,CleanHome,2000,White|Blue,One Size,3,https://via.placeholder.com/200x160.png?text=Towel,0
+10,Cutting Board,Kitchen,CookMaster,2500,Brown,One Size,6,https://via.placeholder.com/200x160.png?text=Cutting+Board,0
