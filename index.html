@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHI'S EMPIRE</title>
+
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f8fafc; }
+
+header {
+  background:#0f172a;
+  color:#fff;
+  padding:1rem;
+  text-align:center;
+}
+
+.controls {
+  display:flex;
+  gap:8px;
+  padding:10px;
+  background:#fff;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+.controls input, .controls select {
+  padding:10px;
+  flex:1;
+  border-radius:8px;
+  border:1px solid #cbd5e1;
+}
+
+.catalog {
+  padding:1rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:1rem;
+}
+
+.product {
+  background:#fff;
+  border-radius:12px;
+  padding:10px;
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.product img {
+  width:100%;
+  height:160px;
+  object-fit:cover;
+  border-radius:10px;
+}
+
+.meta { font-size:.8rem; color:#64748b; }
+
+.price { margin:6px 0; }
+
+.qty-box {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:6px 0;
+}
+
+.qty-box button {
+  padding:8px 12px;
+  font-size:1rem;
+  cursor:pointer;
+}
+
+.btn {
+  background:#25d366;
+  color:#fff;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.badge-out {
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:red;
+  color:white;
+  padding:6px 10px;
+  font-size:.75rem;
+  border-radius:6px;
+  font-weight:bold;
+}
+
+.low-stock { color:orange; font-weight:bold; }
+.no-stock { color:red; font-weight:bold; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>CHI'S EMPIRE</h2>
+  <p>Clothing & Footwear Store</p>
+</header>
+
+<div class="controls">
+  <input id="search" placeholder="Search..." onkeyup="filterProducts()">
+  <select id="category" onchange="filterProducts()">
+    <option value="all">All</option>
+    <option value="footwears">Footwears</option>
+    <option value="clothing">Clothing</option>
+  </select>
+</div>
+
+<section id="catalog" class="catalog"></section>
+
+<script>
+const csvURL = "products.csv";
+const WHATSAPP_NUMBER = "2347057829344";
+const LOW_STOCK_LIMIT = 3;
+
+let products=[], cart=[], qty={};
+
+fetch(csvURL).then(r=>r.text()).then(data=>{
+  data.trim().split("\n").slice(1).forEach((r,i)=>{
+    const [id,name,category,brand,price,image,discount,variants]=r.split(",");
+
+    products.push({
+      id,
+      name,
+      category,
+      brand,
+      price:+price,
+      image,
+      discount:+discount||0,
+      variants: parseVariants(variants.replace(/"/g,''))
+    });
+
+    qty[i]=1;
+  });
+
+  render(products);
+});
+
+function parseVariants(str){
+  let obj={};
+  str.split(";").forEach(colorBlock=>{
+    const [color,sizes]=colorBlock.split(":");
+    obj[color]={};
+    sizes.split("|").forEach(sizeBlock=>{
+      const [size,stock]=sizeBlock.split("=");
+      obj[color][size]=+stock;
+    });
+  });
+  return obj;
+}
+
+function render(list){
+  catalog.innerHTML="";
+  list.forEach((p,i)=>{
+    const price=p.discount||p.price;
+    const colors=Object.keys(p.variants);
+    const colorOptions=colors.map(c=>`<option>${c}</option>`).join("");
+
+    catalog.innerHTML+=`
+    <div class="product">
+
+      <div id="badge${i}"></div>
+
+      <img src="${p.image}">
+      <h3>${p.name}</h3>
+      <div class="meta">${p.brand} • ${p.category}</div>
+      <div class="price"><b>₦${price}</b></div>
+
+      <select id="color${i}" onchange="loadSizes(${i})">${colorOptions}</select>
+      <select id="size${i}" onchange="showStock(${i})"></select>
+
+      <div>Stock: <span id="stock${i}">-</span></div>
+
+      <div class="qty-box">
+        <button onclick="chg(${i},-1)">➖</button>
+        <span id="q${i}">${qty[i]}</span>
+        <button onclick="chg(${i},1)">➕</button>
+      </div>
+
+      <button id="btn${i}" class="btn" onclick="add('${p.name}',${price},${i})">
+        Add to Cart
+      </button>
+    </div>`;
+
+    loadSizes(i);
+  });
+}
+
+function loadSizes(i){
+  const color=document.getElementById("color"+i).value;
+  const sizes=Object.keys(products[i].variants[color]);
+  document.getElementById("size"+i).innerHTML =
+    sizes.map(s=>`<option>${s}</option>`).join("");
+  showStock(i);
+}
+
+function showStock(i){
+  const color=document.getElementById("color"+i).value;
+  const size=document.getElementById("size"+i).value;
+  const stock=products[i].variants[color][size];
+
+  const stockEl=document.getElementById("stock"+i);
+  const btn=document.getElementById("btn"+i);
+  const badge=document.getElementById("badge"+i);
+
+  stockEl.innerText=stock;
+  stockEl.className="";
+  badge.innerHTML="";
+  btn.disabled=false;
+  btn.style.opacity=1;
+
+  if(stock==0){
+    stockEl.innerText="Out of stock";
+    stockEl.classList.add("no-stock");
+    badge.innerHTML=`<div class="badge-out">OUT OF STOCK</div>`;
+    btn.disabled=true;
+    btn.style.opacity=.5;
+  }
+  else if(stock<=LOW_STOCK_LIMIT){
+    stockEl.innerText=stock+" (Low stock!)";
+    stockEl.classList.add("low-stock");
+  }
+}
+
+function chg(i,d){
+  qty[i]+=d;
+  if(qty[i]<1) qty[i]=1;
+  document.getElementById("q"+i).innerText=qty[i];
+}
+
+function add(name,price,i){
+  const color=document.getElementById("color"+i).value;
+  const size=document.getElementById("size"+i).value;
+
+  let stock=products[i].variants[color][size];
+
+  if(stock<=0){
+    alert("Item is out of stock");
+    return;
+  }
+
+  if(qty[i]>stock){
+    alert("Not enough stock");
+    return;
+  }
+
+  products[i].variants[color][size]-=qty[i];
+  showStock(i);
+
+  qty[i]=1;
+  document.getElementById("q"+i).innerText=1;
+}
+
+function filterProducts(){
+  const s=search.value.toLowerCase();
+  const c=category.value;
+  render(products.filter(p=>p.name.toLowerCase().includes(s)&&(c=="all"||p.category==c)));
+}
+</script>
+
+</body>
+</html>

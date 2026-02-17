@@ -1,0 +1,7 @@
+id,name,category,brand,price,image,discount,variants
+1,Nike Air Force 1,footwears,Nike,85000,images/airforce.jpg,0,"Black:40=5|41=2|42=1;White:40=3|41=2|42=0"
+2,Adidas Superstar,footwears,Adidas,78000,images/superstar.jpg,70000,"White:39=4|40=2|41=1;Black:40=3|41=0|42=2"
+3,Men Plain T-Shirt,clothing,Zara,12000,images/tshirt.jpg,0,"Black:S=10|M=3|L=1;Blue:S=4|M=2|L=0"
+4,Women Hoodie,clothing,H&M,25000,images/hoodie.jpg,22000,"Pink:M=5|L=1;Grey:M=3|L=0"
+5,Denim Jeans,clothing,Levis,32000,images/jeans.jpg,0,"Blue:30=4|32=2|34=1;Black:32=3|34=0"
+6,Running Sneakers,footwears,Puma,65000,images/puma.jpg,0,"Black:41=2|42=1|43=0"
