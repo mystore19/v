@@ -1,3 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHI'S EMPIRE</title>
+
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f8fafc; }
+header { background:#0f172a; color:#fff; padding:1rem; text-align:center; }
+
+/* SEARCH + FILTER */
+.controls { display:flex; gap:8px; padding:10px; background:#fff; position:sticky; top:0; z-index:10; }
+.controls input, .controls select { padding:10px; flex:1; border-radius:8px; border:1px solid #cbd5e1; }
+
+/* PRODUCT GRID */
+.catalog { padding:1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem; }
+.product { background:#fff; border-radius:12px; padding:10px; box-shadow:0 6px 16px rgba(0,0,0,.08); display:flex; flex-direction:column; }
+.product img { width:100%; height:160px; object-fit:cover; border-radius:10px; }
+.product h3 { font-size:1.05rem; margin:6px 0; }
+.meta { font-size:.8rem; color:#64748b; }
+.price { margin:6px 0; }
+.qty-box { display:flex; align-items:center; gap:10px; margin:6px 0; }
+.qty-box button { padding:8px 12px; font-size:1rem; cursor:pointer; }
+.btn { background:#25d366; color:#fff; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+.cart-btn { position:fixed; bottom:20px; right:20px; background:#0f172a; color:#fff; padding:16px 20px; border-radius:40px; border:none; z-index:200; font-weight:bold; }
+
+/* CART SIDEBAR / DRAWER */
+#cartSidebar { position:fixed; top:0; right:-420px; width:380px; height:100%; background:#fff; box-shadow:-8px 0 30px rgba(0,0,0,.25); z-index:1000; transition:right .35s ease; display:flex; flex-direction:column; }
+#cartSidebar.open { right:0; }
+#cartBox { flex:1; overflow-y:auto; padding:1rem; }
+#cartBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:.3s; z-index:900; }
+#cartSidebar.open ~ #cartBackdrop { opacity:1; pointer-events:auto; }
+#checkoutBtn { width:100%; padding:14px; font-size:1.05rem; margin-top:10px; background:#25d366; color:#fff; border:none; cursor:pointer; }
+
+/* MOBILE CART */
+@media(max-width:600px){ #cartSidebar{ width:100%; height:85%; bottom:-100%; top:auto; right:0; border-radius:16px 16px 0 0; transition:bottom .35s ease; } #cartSidebar.open{ bottom:0; } }
+
+/* TOAST */
+#toast { position:fixed; bottom:120px; right:20px; background:#25d366; color:#fff; padding:12px 18px; border-radius:8px; opacity:0; transition:.3s; }
+#toast.show { opacity:1; }
+
+/* STOCK BADGES */
+.badge { padding:4px 8px; border-radius:5px; font-size:12px; color:#fff; display:inline-block; margin-bottom:6px; }
+.low { background:orange; }
+.out { background:red; }
+.qty-btn { width:30px; padding:2px 5px; font-weight:bold; margin:0 4px; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>CHI'S EMPIRE</h2>
+  <p>Store</p>
+</header>
+
+<div class="controls">
+  <input id="search" placeholder="Search..." onkeyup="applyFilters()">
+  <select id="category" onchange="applyFilters()">
+    <option value="All">All</option>
+    <option value="Clothing">Clothing</option>
+    <option value="Shoes">Shoes</option>
+    <option value="Kitchen">Kitchen</option>
+  </select>
+</div>
+
+<section id="catalog" class="catalog"></section>
+
+<button class="cart-btn" onclick="openCart()">🛒 Cart (<span id="cartCount">0</span>)</button>
+<div id="toast">Added to cart</div>
+
+<!-- CART -->
+<div id="cartSidebar">
+  <div id="cartBox">
+    <h3>Your Cart</h3>
+    <div id="cartItems"></div>
+    <p id="cartTotal"></p>
+
+    <h4>Delivery Details</h4>
+    <input id="custName" placeholder="Full Name" style="width:100%;padding:10px;margin:6px 0">
+    <input id="custPhone" placeholder="Phone Number" style="width:100%;padding:10px;margin:6px 0">
+    <input id="custAddress" placeholder="Delivery Address" style="width:100%;padding:10px;margin:6px 0">
+    <input id="custCity" placeholder="City / Area" style="width:100%;padding:10px;margin:6px 0">
+    <textarea id="custNote" placeholder="Extra note (optional)" style="width:100%;padding:10px;margin:6px 0"></textarea>
+
+    <button id="checkoutBtn" onclick="checkoutWhatsApp()">Checkout on WhatsApp</button>
+    <button onclick="closeCart()" style="width:100%;margin-top:8px;">Continue Shopping</button>
+  </div>
+</div>
+<div id="cartBackdrop" onclick="closeCart()"></div>
+
 <script>
 const csvURL = "products.csv";
 const WHATSAPP_NUMBER = "2347057829344";
@@ -5,107 +97,75 @@ const DELIVERY_FEE = 2500;
 
 let products=[], cart=[], qty={};
 
-// Load CSV and render
+// Load CSV
 fetch(csvURL).then(r=>r.text()).then(data=>{
   data.trim().split("\n").slice(1).forEach((r,i)=>{
     const [id,name,category,brand,price,colors,sizes,stock,image,discount]=r.split(",");
     products.push({
-      id, name, category, brand, price:+price, 
-      colors:colors.split("|"), sizes:sizes.split("|"), 
-      stock:+stock, image, discount:+discount||0
+      id,name,category,brand,price:+price,colors:colors.split("|"),sizes:sizes.split("|"),
+      stock:+stock,image,discount:+discount||0
     });
     qty[i]=1;
   });
 
-  loadCart();          // Load saved cart from localStorage
+  loadCart();
   renderProducts(products);
   renderCart();
   updateCartCount();
 });
 
-// ---------------------- CART PERSISTENCE ----------------------
+// ---------------- CART PERSISTENCE ----------------
+function saveCart(){ localStorage.setItem("cartData",JSON.stringify(cart)); localStorage.setItem("stockData",JSON.stringify(products)); }
+function loadCart(){ const c=localStorage.getItem("cartData"); const s=localStorage.getItem("stockData"); if(c) cart=JSON.parse(c); if(s) products=JSON.parse(s); }
 
-// Save cart to localStorage
-function saveCart(){
-  localStorage.setItem("cartData", JSON.stringify(cart));
-  localStorage.setItem("stockData", JSON.stringify(products));
-}
-
-// Load cart from localStorage
-function loadCart(){
-  const savedCart = localStorage.getItem("cartData");
-  const savedStock = localStorage.getItem("stockData");
-
-  if(savedCart) cart = JSON.parse(savedCart);
-  if(savedStock) products = JSON.parse(savedStock);
-}
-
-// ---------------------- PRODUCT RENDER ----------------------
+// ---------------- PRODUCT RENDER ----------------
 function renderProducts(list){
   catalog.innerHTML="";
   list.forEach((p,i)=>{
-    let badge = "";
-    if(p.stock<=0){ badge=`<div class="badge out">Out of Stock</div>`; }
-    else if(p.stock<=5){ badge=`<div class="badge low">Low Stock</div>`; }
-
+    let badge="";
+    if(p.stock<=0) badge=`<div class="badge out">Out of Stock</div>`;
+    else if(p.stock<=5) badge=`<div class="badge low">Low Stock</div>`;
     const price = p.discount || p.price;
-
     catalog.innerHTML+=`
-    <div class="product">
-      ${badge}
-      <img src="${p.image}">
-      <h3>${p.name}</h3>
-      <div class="meta">${p.brand} • ${p.category}</div>
-      <div class="price"><b>₦${price}</b></div>
-      <select id="color-${p.id}">${p.colors.map(c=>`<option>${c}</option>`).join("")}</select>
-      <select id="size-${p.id}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
-      <div class="qty-box">
-        <button onclick="chg(${i},-1)">➖</button>
-        <span id="q${i}">${qty[i]}</span>
-        <button onclick="chg(${i},1)">➕</button>
-      </div>
-      <button class="btn" onclick="addToCart(${i})" ${p.stock<=0?'disabled':''}>Add to Cart</button>
-    </div>`;
+      <div class="product">
+        ${badge}
+        <img src="${p.image}">
+        <h3>${p.name}</h3>
+        <div class="meta">${p.brand} • ${p.category}</div>
+        <div class="price"><b>₦${price}</b></div>
+        <select id="color-${p.id}">${p.colors.map(c=>`<option>${c}</option>`).join("")}</select>
+        <select id="size-${p.id}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
+        <div class="qty-box">
+          <button onclick="chg(${i},-1)">➖</button>
+          <span id="q${i}">${qty[i]}</span>
+          <button onclick="chg(${i},1)">➕</button>
+        </div>
+        <button class="btn" onclick="addToCart(${i})" ${p.stock<=0?'disabled':''}>Add to Cart</button>
+      </div>`;
   });
 }
+function chg(i,d){ qty[i]+=d; if(qty[i]<1) qty[i]=1; document.getElementById("q"+i).innerText=qty[i]; }
 
-// Quantity selector
-function chg(i,d){ 
-  qty[i]+=d; 
-  if(qty[i]<1) qty[i]=1; 
-  document.getElementById("q"+i).innerText=qty[i]; 
-}
-
-// Add to cart
+// ---------------- CART FUNCTIONS ----------------
 function addToCart(i){
   const p = products[i];
-  const selectedColor = document.getElementById(`color-${p.id}`).value;
-  const selectedSize = document.getElementById(`size-${p.id}`).value;
-  let q = qty[i];
-  if(q>p.stock){ alert("Not enough stock"); return; }
+  const color = document.getElementById(`color-${p.id}`).value;
+  const size = document.getElementById(`size-${p.id}`).value;
+  let q = qty[i]; if(q>p.stock){ alert("Not enough stock"); return; }
 
-  const f = cart.find(x=>x.id==p.id && x.color==selectedColor && x.size==selectedSize);
-  if(f) f.qty += q;
-  else cart.push({id:p.id,name:p.name,price:p.price,color:selectedColor,size:selectedSize,qty:q});
+  const f = cart.find(x=>x.id==p.id && x.color==color && x.size==size);
+  if(f) f.qty+=q; else cart.push({id:p.id,name:p.name,price:p.price,color,size,qty:q});
 
-  p.stock -= q;
-  qty[i]=1; document.getElementById("q"+i).innerText=1;
-  renderProducts(products);
-  renderCart();
-  updateCartCount();
-  saveCart();  // persist changes
-  toast.classList.add("show");
-  setTimeout(()=>toast.classList.remove("show"),1200);
+  p.stock-=q; qty[i]=1; document.getElementById("q"+i).innerText=1;
+  renderProducts(products); renderCart(); updateCartCount(); saveCart();
+  toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"),1200);
 }
 
-// Render cart drawer
 function renderCart(){
   let html="", sub=0;
   cart.forEach((item,n)=>{
-    const t = item.price*item.qty;
-    sub+=t;
-    html+=`
-    <div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
+    const t=item.price*item.qty; sub+=t;
+    html+=`<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
       <b>${item.name}</b> (${item.color},${item.size})
       <div style="display:flex;align-items:center;gap:5px;margin-top:4px">
         <button class="qty-btn" onclick="mod(${n},-1)">-</button>
@@ -113,63 +173,42 @@ function renderCart(){
         <button class="qty-btn" onclick="mod(${n},1)">+</button>
         <span style="margin-left:auto">₦${t}</span>
         <button onclick="del(${n})">❌</button>
-      </div>
-    </div>`;
+      </div></div>`;
   });
   cartItems.innerHTML = html || "<p>Cart empty</p>";
   cartTotal.innerHTML = `Subtotal ₦${sub}<br>Delivery ₦${cart.length?DELIVERY_FEE:0}<br><b>Total ₦${cart.length?sub+DELIVERY_FEE:0}</b>`;
 }
 
-// Modify quantity in cart
 function mod(i,d){
-  const item = cart[i];
-  const p = products.find(x=>x.id==item.id);
+  const item=cart[i]; const p=products.find(x=>x.id==item.id);
   if(d>0 && p.stock<=0) return alert("No more stock");
   if(d<0 && item.qty<=1) return;
-  item.qty += d;
-  p.stock -= d;
+  item.qty+=d; p.stock-=d;
   if(item.qty<=0) cart.splice(i,1);
-  renderProducts(products);
-  renderCart();
-  updateCartCount();
-  saveCart();
+  renderProducts(products); renderCart(); updateCartCount(); saveCart();
 }
+function del(i){ const item=cart[i]; const p=products.find(x=>x.id==item.id); p.stock+=item.qty; cart.splice(i,1); renderProducts(products); renderCart(); updateCartCount(); saveCart(); }
 
-// Delete item
-function del(i){
-  const item = cart[i];
-  const p = products.find(x=>x.id==item.id);
-  p.stock += item.qty;
-  cart.splice(i,1);
-  renderProducts(products);
-  renderCart();
-  updateCartCount();
-  saveCart();
-}
-
-// Cart drawer controls
 function openCart(){ cartSidebar.classList.add("open"); }
 function closeCart(){ cartSidebar.classList.remove("open"); }
-function updateCartCount(){ cartCount.innerText = cart.length; }
+function updateCartCount(){ cartCount.innerText=cart.length; }
 
-// WhatsApp Checkout
 function checkoutWhatsApp(){
   if(!cart.length) return alert("Cart empty");
   if(!custName.value||!custPhone.value||!custAddress.value||!custCity.value) return alert("Fill delivery details");
 
   let msg=`🧾 New Order%0AName: ${custName.value}%0APhone: ${custPhone.value}%0AAddress: ${custAddress.value}, ${custCity.value}%0ANote: ${custNote.value || "None"}%0A%0A`;
   cart.forEach((item,n)=>{ msg+=`${n+1}. ${item.name} (${item.color},${item.size}) x${item.qty} ₦${item.price*item.qty}%0A`; });
-  let subtotal = cart.reduce((a,b)=>a+b.price*b.qty,0);
-  msg+=`%0ATOTAL ₦${subtotal + DELIVERY_FEE}`;
+  let subtotal=cart.reduce((a,b)=>a+b.price*b.qty,0);
+  msg+=`%0ATOTAL ₦${subtotal+DELIVERY_FEE}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank");
-
   cart=[]; renderCart(); updateCartCount(); renderProducts(products); saveCart();
 }
 
-// Search & Filter
 function applyFilters(){
-  const s = search.value.toLowerCase();
-  const c = category.value;
-  renderProducts(products.filter(p=>p.name.toLowerCase().includes(s) && (c=="All" || p.category==c)));
+  const s=search.value.toLowerCase(); const c=category.value;
+  renderProducts(products.filter(p=>p.name.toLowerCase().includes(s)&&(c=="All"||p.category==c)));
 }
 </script>
+</body>
+</html>
