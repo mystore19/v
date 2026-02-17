@@ -1,231 +1,175 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHI’S EMPIRE</title>
-
-<style>
-body { font-family: Arial; margin:0; background:#f5f5f5; }
-header { background:#000; color:#fff; padding:15px; text-align:center; }
-.container { padding:20px; }
-.controls { display:flex; gap:10px; margin-bottom:15px; }
-.controls input, .controls select { flex:1; padding:8px; }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:20px; margin-bottom:40px; }
-.card { background:#fff; padding:15px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-.card img { width:100%; height:180px; object-fit:cover; border-radius:8px; }
-.badge { padding:4px 8px; border-radius:5px; font-size:12px; color:#fff; display:inline-block; margin-bottom:6px; }
-.low { background:orange; }
-.out { background:red; }
-select,button,input { width:100%; padding:8px; margin-top:6px; }
-button { background:black; color:white; border:none; cursor:pointer; }
-.cart { position:fixed; right:0; top:0; width:320px; height:100%; background:white; box-shadow:-3px 0 8px rgba(0,0,0,0.1); padding:15px; overflow:auto; }
-.checkout { background:green; }
-.remove-btn { background:red; margin-top:4px; width:100%; }
-h3.section-title { margin-top:0; }
-</style>
-</head>
-
-<body>
-
-<header>
-  <h2>CHI’S EMPIRE STORE</h2>
-</header>
-
-<div class="container">
-
-  <div class="controls">
-    <input type="text" id="search" placeholder="Search products..." onkeyup="applyFilters()">
-    <select id="category" onchange="applyFilters()">
-      <option value="All">All Categories</option>
-      <option value="Clothing">Clothing</option>
-      <option value="Shoes">Shoes</option>
-      <option value="Kitchen">Kitchen</option>
-    </select>
-  </div>
-
-  <!-- Featured Products Section -->
-  <h3 class="section-title">Featured Products</h3>
-  <div class="grid" id="featured-list"></div>
-
-  <!-- Rest of the Catalog -->
-  <h3 class="section-title">All Products</h3>
-  <div class="grid" id="product-list"></div>
-</div>
-
-<div class="cart">
-  <h3>Cart</h3>
-  <div id="cart-items"></div>
-  <hr>
-  <h4>Total: ₦<span id="total">0</span></h4>
-  <button class="checkout" onclick="checkout()">Checkout via WhatsApp</button>
-</div>
-
 <script>
-let products = [];
-let cart = [];
+const csvURL = "products.csv";
+const WHATSAPP_NUMBER = "2347057829344";
+const DELIVERY_FEE = 2500;
 
-// Load CSV
-fetch("products.csv")
-.then(res => res.text())
-.then(text => {
-  const rows = text.trim().split("\n").slice(1);
-  products = rows.map(row => {
-    const cols = row.split(",");
-    return {
-      id: cols[0],
-      name: cols[1],
-      category: cols[2],
-      price: Number(cols[3]),
-      colors: cols[4].split("|"),
-      sizes: cols[5].split("|"),
-      stock: Number(cols[6]),
-      image: cols[7]
-    }
+let products=[], cart=[], qty={};
+
+// Load CSV and render
+fetch(csvURL).then(r=>r.text()).then(data=>{
+  data.trim().split("\n").slice(1).forEach((r,i)=>{
+    const [id,name,category,brand,price,colors,sizes,stock,image,discount]=r.split(",");
+    products.push({
+      id, name, category, brand, price:+price, 
+      colors:colors.split("|"), sizes:sizes.split("|"), 
+      stock:+stock, image, discount:+discount||0
+    });
+    qty[i]=1;
   });
 
-  loadSavedStock();
-  renderProducts();
+  loadCart();          // Load saved cart from localStorage
+  renderProducts(products);
+  renderCart();
+  updateCartCount();
 });
 
-// SAVE STOCK PERMANENTLY
-function saveStock() {
+// ---------------------- CART PERSISTENCE ----------------------
+
+// Save cart to localStorage
+function saveCart(){
+  localStorage.setItem("cartData", JSON.stringify(cart));
   localStorage.setItem("stockData", JSON.stringify(products));
 }
 
-function loadSavedStock() {
-  const saved = localStorage.getItem("stockData");
-  if(saved){
-    products = JSON.parse(saved);
-  }
+// Load cart from localStorage
+function loadCart(){
+  const savedCart = localStorage.getItem("cartData");
+  const savedStock = localStorage.getItem("stockData");
+
+  if(savedCart) cart = JSON.parse(savedCart);
+  if(savedStock) products = JSON.parse(savedStock);
 }
 
-// RENDER PRODUCTS
-function renderProducts(filtered=products){
+// ---------------------- PRODUCT RENDER ----------------------
+function renderProducts(list){
+  catalog.innerHTML="";
+  list.forEach((p,i)=>{
+    let badge = "";
+    if(p.stock<=0){ badge=`<div class="badge out">Out of Stock</div>`; }
+    else if(p.stock<=5){ badge=`<div class="badge low">Low Stock</div>`; }
 
-  // Featured Products (Knife & Spoon)
-  const featured = filtered.filter(p => p.name.toLowerCase().includes("knife") || p.name.toLowerCase().includes("spoon"));
-  const featuredList = document.getElementById("featured-list");
-  featuredList.innerHTML = "";
-  featured.forEach(p => featuredList.innerHTML += productCardHTML(p));
+    const price = p.discount || p.price;
 
-  // Rest of catalog (exclude featured)
-  const rest = filtered.filter(p => !featured.includes(p));
-  const list = document.getElementById("product-list");
-  list.innerHTML = "";
-  rest.forEach(p => list.innerHTML += productCardHTML(p));
-}
-
-// Generate HTML for a single product
-function productCardHTML(p){
-  let badge = "";
-  if(p.stock <= 0){ badge = `<div class="badge out">Out of Stock</div>`; }
-  else if(p.stock <= 5){ badge = `<div class="badge low">Low Stock</div>`; }
-
-  return `
-      <div class="card">
-        ${badge}
-        <img src="${p.image}">
-        <h4>${p.name}</h4>
-        <p>₦${p.price}</p>
-
-        <select id="color-${p.id}">
-          ${p.colors.map(c => `<option>${c}</option>`).join("")}
-        </select>
-
-        <select id="size-${p.id}">
-          ${p.sizes.map(s => `<option>${s}</option>`).join("")}
-        </select>
-
-        <input type="number" id="qty-${p.id}" min="1" value="1" max="${p.stock}">
-
-        <p>Stock: ${p.stock}</p>
-
-        <button onclick="addToCart(${p.id})" ${p.stock<=0?"disabled":""}>
-          Add to Cart
-        </button>
+    catalog.innerHTML+=`
+    <div class="product">
+      ${badge}
+      <img src="${p.image}">
+      <h3>${p.name}</h3>
+      <div class="meta">${p.brand} • ${p.category}</div>
+      <div class="price"><b>₦${price}</b></div>
+      <select id="color-${p.id}">${p.colors.map(c=>`<option>${c}</option>`).join("")}</select>
+      <select id="size-${p.id}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
+      <div class="qty-box">
+        <button onclick="chg(${i},-1)">➖</button>
+        <span id="q${i}">${qty[i]}</span>
+        <button onclick="chg(${i},1)">➕</button>
       </div>
-  `;
+      <button class="btn" onclick="addToCart(${i})" ${p.stock<=0?'disabled':''}>Add to Cart</button>
+    </div>`;
+  });
 }
 
-// ADD TO CART
-function addToCart(id){
-  const product = products.find(p => p.id == id);
-  let qty = Number(document.getElementById(`qty-${id}`).value);
+// Quantity selector
+function chg(i,d){ 
+  qty[i]+=d; 
+  if(qty[i]<1) qty[i]=1; 
+  document.getElementById("q"+i).innerText=qty[i]; 
+}
 
-  if(qty > product.stock){ alert("Not enough stock available"); return; }
+// Add to cart
+function addToCart(i){
+  const p = products[i];
+  const selectedColor = document.getElementById(`color-${p.id}`).value;
+  const selectedSize = document.getElementById(`size-${p.id}`).value;
+  let q = qty[i];
+  if(q>p.stock){ alert("Not enough stock"); return; }
 
-  const color = document.getElementById(`color-${id}`).value;
-  const size = document.getElementById(`size-${id}`).value;
+  const f = cart.find(x=>x.id==p.id && x.color==selectedColor && x.size==selectedSize);
+  if(f) f.qty += q;
+  else cart.push({id:p.id,name:p.name,price:p.price,color:selectedColor,size:selectedSize,qty:q});
 
-  cart.push({ id: product.id, name: product.name, price: product.price, color, size, qty });
-  product.stock -= qty;
-
-  saveStock();
-  renderProducts();
+  p.stock -= q;
+  qty[i]=1; document.getElementById("q"+i).innerText=1;
+  renderProducts(products);
   renderCart();
+  updateCartCount();
+  saveCart();  // persist changes
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),1200);
 }
 
-// RENDER CART
+// Render cart drawer
 function renderCart(){
-  const items = document.getElementById("cart-items");
-  const total = document.getElementById("total");
-  items.innerHTML = "";
-  let sum = 0;
-
-  cart.forEach((item,index)=>{
-    sum += item.price * item.qty;
-    items.innerHTML += `
-      <div>
-        <b>${item.name}</b><br>
-        ${item.color} | ${item.size}<br>
-        Qty: ${item.qty}<br>
-        ₦${item.price * item.qty}<br>
-        <button class="remove-btn" onclick="removeItem(${index})">Remove</button>
-        <hr>
+  let html="", sub=0;
+  cart.forEach((item,n)=>{
+    const t = item.price*item.qty;
+    sub+=t;
+    html+=`
+    <div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
+      <b>${item.name}</b> (${item.color},${item.size})
+      <div style="display:flex;align-items:center;gap:5px;margin-top:4px">
+        <button class="qty-btn" onclick="mod(${n},-1)">-</button>
+        ${item.qty}
+        <button class="qty-btn" onclick="mod(${n},1)">+</button>
+        <span style="margin-left:auto">₦${t}</span>
+        <button onclick="del(${n})">❌</button>
       </div>
-    `;
+    </div>`;
   });
-
-  total.innerText = sum;
+  cartItems.innerHTML = html || "<p>Cart empty</p>";
+  cartTotal.innerHTML = `Subtotal ₦${sub}<br>Delivery ₦${cart.length?DELIVERY_FEE:0}<br><b>Total ₦${cart.length?sub+DELIVERY_FEE:0}</b>`;
 }
 
-// REMOVE FROM CART
-function removeItem(index){
-  const item = cart[index];
-  const product = products.find(p => p.id == item.id);
-  product.stock += item.qty;
-
-  cart.splice(index,1);
-  saveStock();
-  renderProducts();
+// Modify quantity in cart
+function mod(i,d){
+  const item = cart[i];
+  const p = products.find(x=>x.id==item.id);
+  if(d>0 && p.stock<=0) return alert("No more stock");
+  if(d<0 && item.qty<=1) return;
+  item.qty += d;
+  p.stock -= d;
+  if(item.qty<=0) cart.splice(i,1);
+  renderProducts(products);
   renderCart();
+  updateCartCount();
+  saveCart();
 }
 
-// CHECKOUT WHATSAPP
-function checkout(){
-  if(cart.length===0){ alert("Cart empty"); return; }
-  let message = "Hello, I want to order:%0A";
-  cart.forEach(item=>{
-    message += `${item.name} (${item.color}, ${item.size}) x${item.qty} - ₦${item.price*item.qty}%0A`;
-  });
-  message += `%0ATotal: ₦${document.getElementById("total").innerText}`;
-  window.open(`https://wa.me/2340000000000?text=${message}`);
+// Delete item
+function del(i){
+  const item = cart[i];
+  const p = products.find(x=>x.id==item.id);
+  p.stock += item.qty;
+  cart.splice(i,1);
+  renderProducts(products);
+  renderCart();
+  updateCartCount();
+  saveCart();
 }
 
-// SEARCH + FILTER
+// Cart drawer controls
+function openCart(){ cartSidebar.classList.add("open"); }
+function closeCart(){ cartSidebar.classList.remove("open"); }
+function updateCartCount(){ cartCount.innerText = cart.length; }
+
+// WhatsApp Checkout
+function checkoutWhatsApp(){
+  if(!cart.length) return alert("Cart empty");
+  if(!custName.value||!custPhone.value||!custAddress.value||!custCity.value) return alert("Fill delivery details");
+
+  let msg=`🧾 New Order%0AName: ${custName.value}%0APhone: ${custPhone.value}%0AAddress: ${custAddress.value}, ${custCity.value}%0ANote: ${custNote.value || "None"}%0A%0A`;
+  cart.forEach((item,n)=>{ msg+=`${n+1}. ${item.name} (${item.color},${item.size}) x${item.qty} ₦${item.price*item.qty}%0A`; });
+  let subtotal = cart.reduce((a,b)=>a+b.price*b.qty,0);
+  msg+=`%0ATOTAL ₦${subtotal + DELIVERY_FEE}`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank");
+
+  cart=[]; renderCart(); updateCartCount(); renderProducts(products); saveCart();
+}
+
+// Search & Filter
 function applyFilters(){
-  const query = document.getElementById("search").value.toLowerCase();
-  const category = document.getElementById("category").value;
-
-  const filtered = products.filter(p=>{
-    const matchName = p.name.toLowerCase().includes(query);
-    const matchCategory = category=="All" || p.category==category;
-    return matchName && matchCategory;
-  });
-
-  renderProducts(filtered);
+  const s = search.value.toLowerCase();
+  const c = category.value;
+  renderProducts(products.filter(p=>p.name.toLowerCase().includes(s) && (c=="All" || p.category==c)));
 }
 </script>
-</body>
-</html>
