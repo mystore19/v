@@ -71,12 +71,12 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 <div id="cartBackdrop" onclick="closeCart()"></div>
 
 <script>
-const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
+const csvURL = "https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
 const WHATSAPP_NUMBER = "2347057829344";
 const DELIVERY_FEE = ;
 let products=[], cart=[], qty={};
 
-fetch(https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv).then(r=>r.text()).then(data=>{
+fetch(https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv).then(r=>r.text()).then(data=>{
   data.trim().split("\n").slice(1).forEach((r,i)=>{
     const [id,name,category,brand,price,colors,sizes,stock_map,image,discount]=r.split(",");
     const stockObj={};
@@ -188,4 +188,5 @@ function checkoutWhatsApp(){
 </script>
 </body>
 </html>
+
 
