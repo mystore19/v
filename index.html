@@ -71,23 +71,41 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 <div id="cartBackdrop" onclick="closeCart()"></div>
 
 <script>
-const csvURL = "https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
-const WHATSAPP_NUMBER = "2347057829344";
-const DELIVERY_FEE = ;
-let products=[], cart=[], qty={};
 
-fetch(https://api.allorigins.win/raw?url=https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv).then(r=>r.text()).then(data=>{
-  data.trim().split("\n").slice(1).forEach((r,i)=>{
-    const [id,name,category,brand,price,colors,sizes,stock_map,image,discount]=r.split(",");
-    const stockObj={};
-    stock_map.split(";").forEach(s=>{
-      const [k,v]=s.split("="); stockObj[k]=+v;
+const csvURL = "https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
+
+async function loadProducts() {
+  try {
+    const response = await fetch(csvURL);
+    const data = await response.text();
+
+    console.log("CSV Loaded:", data);
+
+    const rows = data.split("\n").slice(1);
+    const container = document.getElementById("productContainer");
+    container.innerHTML = "";
+
+    rows.forEach(row => {
+      const cols = row.split(",");
+      if (cols.length > 1) {
+        container.innerHTML += `
+          <div class="product">
+            <img src="${cols[8]}" width="150">
+            <h3>${cols[1]}</h3>
+            <p>₦${cols[4]}</p>
+          </div>
+        `;
+      }
     });
-    products.push({id,name,category,brand,price:+price,image,colors:colors.split("|"),sizes:sizes.split("|"),stock:stockObj,discount:+discount||0});
-    qty[i]=1;
-  });
-  render(products);
-});
+
+  } catch (error) {
+    console.error("Error loading CSV:", error);
+  }
+}
+
+loadProducts();
+
+</script>
 
 function render(list){
   catalog.innerHTML="";
@@ -188,6 +206,7 @@ function checkoutWhatsApp(){
 </script>
 </body>
 </html>
+
 
 
 
