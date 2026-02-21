@@ -71,12 +71,12 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 <div id="cartBackdrop" onclick="closeCart()"></div>
 
 <script>
-const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1pwjymZpN-wewrDHT5BXn_7nKfLriSBxvdNFOMX3j91wmyCefuIU2kiGpIFoQYGbi1bXOpo6xYSM3/pub?output=csv";
+const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
 const WHATSAPP_NUMBER = "2347057829344";
 const DELIVERY_FEE = ;
 let products=[], cart=[], qty={};
 
-fetch(https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1pwjymZpN-wewrDHT5BXn_7nKfLriSBxvdNFOMX3j91wmyCefuIU2kiGpIFoQYGbi1bXOpo6xYSM3/pub?output=csv).then(r=>r.text()).then(data=>{
+fetch(https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv).then(r=>r.text()).then(data=>{
   data.trim().split("\n").slice(1).forEach((r,i)=>{
     const [id,name,category,brand,price,colors,sizes,stock_map,image,discount]=r.split(",");
     const stockObj={};
@@ -141,15 +141,51 @@ function del(i){ cart.splice(i,1); openCart(); }
 function closeCart(){ cartSidebar.classList.remove("open"); }
 
 function checkoutWhatsApp(){
+
   if(!cart.length) return alert("Cart is empty");
-  if(!custName.value||!custPhone.value||!custAddress.value||!custCity.value) return alert("Fill delivery details");
-  let msg=`🧾 New Order%0AName: ${custName.value}%0APhone: ${custPhone.value}%0AAddress: ${custAddress.value}, ${custCity.value}%0A%0A`;
-  let sub=0;
-  cart.forEach((i,n)=>{ sub+=i.price*i.qty; msg+=`${n+1}. ${i.name} x${i.qty} ₦${i.price*i.qty}%0A`; });
-  msg+=`%0ASubtotal ₦${sub}%0ADelivery ₦${DELIVERY_FEE}%0ATOTAL ₦${sub+DELIVERY_FEE}`;
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank");
-  cart=[]; cartCount.innerText=0; closeCart();
+
+  if(!custName.value || !custPhone.value || !custAddress.value || !custCity.value){
+    return alert("Fill delivery details");
+  }
+
+  cart.forEach(item => {
+
+    fetch("https://docs.google.com/forms/d/e/1FAIpQLScH9MYQZWLDLs7AO4D5a9RjQSuLR74KM83VrKEsUhfCb-c55Q/formResponse", {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body:
+        "entry.111=" + encodeURIComponent(item.name) +
+        "&entry.222=" + encodeURIComponent(item.color || "Default") +
+        "&entry.333=" + encodeURIComponent(item.size || "Default") +
+        "&entry.444=" + item.qty +
+        "&entry.555=" + encodeURIComponent(custName.value) +
+        "&entry.666=" + encodeURIComponent(custPhone.value) +
+        "&entry.777=" + encodeURIComponent(custAddress.value) +
+        "&entry.888=" + encodeURIComponent(custCity.value)
+    });
+
+  });
+
+  let msg = "🧾 New Order%0A";
+  let total = 0;
+
+  cart.forEach((item,i)=>{
+    total += item.price * item.qty;
+    msg += (i+1)+". "+item.name+" x"+item.qty+" ₦"+(item.price*item.qty)+"%0A";
+  });
+
+  msg += "%0ATotal ₦"+total;
+
+  window.open("https://wa.me/2349030013293?text="+msg,"_blank");
+
+  cart=[];
+  cartCount.innerText=0;
+  closeCart();
 }
 </script>
 </body>
 </html>
+
