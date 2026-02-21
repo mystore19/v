@@ -11,7 +11,7 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 .controls{display:flex;gap:8px;padding:10px;background:#fff;position:sticky;top:0;z-index:10;}
 .controls input,.controls select{padding:10px;flex:1;border-radius:8px;border:1px solid #cbd5e1;}
 .catalog{padding:1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;}
-.product{background:#fff;border-radius:12px;padding:10px;box-shadow:0 6px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;position:relative;}
+.product{background:#fff;border-radius:12px;padding:10px;box-shadow:0 6px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;}
 .product img{width:100%;height:160px;object-fit:cover;border-radius:10px;}
 .product h3{font-size:1.05rem;margin:6px 0;}
 .meta{font-size:.8rem;color:#64748b;}
@@ -26,9 +26,9 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 #cartBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.3s;z-index:900;}
 #cartSidebar.open~#cartBackdrop{opacity:1;pointer-events:auto;}
 #checkoutBtn{width:100%;padding:14px;font-size:1.05rem;margin-top:10px;}
-.badge{position:absolute;top:10px;left:10px;padding:4px 8px;background:red;color:#fff;border-radius:6px;font-size:.8rem;}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -56,12 +56,6 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
     <div id="cartItems"></div>
     <p id="cartTotal"></p>
 
-    <h4>Delivery Details</h4>
-    <input id="custName" placeholder="Full Name" style="width:100%;padding:10px;margin:6px 0">
-    <input id="custPhone" placeholder="Phone Number" style="width:100%;padding:10px;margin:6px 0">
-    <input id="custAddress" placeholder="Delivery Address" style="width:100%;padding:10px;margin:6px 0">
-    <input id="custCity" placeholder="City / Area" style="width:100%;padding:10px;margin:6px 0">
-
     <button id="checkoutBtn" class="btn" onclick="checkoutWhatsApp()">Checkout on WhatsApp</button>
     <button onclick="closeCart()" style="width:100%;margin-top:8px;">Continue Shopping</button>
   </div>
@@ -71,7 +65,7 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 
 <script>
 
-const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
+const csvURL = "https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
 
 let products = [];
 let cart = [];
@@ -80,7 +74,7 @@ const DELIVERY_FEE = 1500;
 
 async function loadProducts(){
   try{
-    const res = await fetch(https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv);
+    const res = await fetch(csvURL);
     const text = await res.text();
     const rows = text.trim().split("\n").slice(1);
 
@@ -99,7 +93,7 @@ async function loadProducts(){
     render(products);
 
   }catch(err){
-    console.error("CSV Load Error:",err);
+    console.error("CSV Load Error:", err);
   }
 }
 
@@ -107,7 +101,7 @@ function render(list){
   const catalog = document.getElementById("catalog");
   catalog.innerHTML="";
   list.forEach((p,i)=>{
-    catalog.innerHTML+=`
+    catalog.innerHTML += `
       <div class="product">
         <img src="${p.image}">
         <h3>${p.name}</h3>
@@ -119,44 +113,55 @@ function render(list){
           <button onclick="chg(${i},1)">➕</button>
         </div>
         <button class="btn" onclick="add(${i})">Add to Cart</button>
-      </div>`;
+      </div>
+    `;
   });
 }
 
 function filterProducts(){
-  const s=search.value.toLowerCase();
-  const c=category.value;
-  render(products.filter(p=>p.name.toLowerCase().includes(s)&&(c=="all"||p.category==c)));
+  const s = document.getElementById("search").value.toLowerCase();
+  const c = document.getElementById("category").value;
+  render(products.filter(p =>
+    p.name.toLowerCase().includes(s) &&
+    (c === "all" || p.category === c)
+  ));
 }
 
 function chg(i,d){
-  qty[i]+=d;
-  if(qty[i]<1) qty[i]=1;
-  document.getElementById("q"+i).innerText=qty[i];
+  qty[i] += d;
+  if(qty[i] < 1) qty[i] = 1;
+  document.getElementById("q"+i).innerText = qty[i];
 }
 
 function add(i){
-  const p=products[i];
-  const found=cart.find(x=>x.name==p.name);
-  if(found) found.qty+=qty[i];
-  else cart.push({name:p.name,price:p.price,qty:qty[i]});
-  qty[i]=1;
-  document.getElementById("q"+i).innerText=1;
-  document.getElementById("cartCount").innerText=cart.length;
+  const p = products[i];
+  const found = cart.find(x => x.name === p.name);
+  if(found) found.qty += qty[i];
+  else cart.push({name:p.name, price:p.price, qty:qty[i]});
+  qty[i] = 1;
+  document.getElementById("q"+i).innerText = 1;
+  document.getElementById("cartCount").innerText = cart.length;
 }
 
 function openCart(){
   document.getElementById("cartSidebar").classList.add("open");
-  let html="",sub=0;
-  cart.forEach((i,n)=>{
-    const t=i.qty*i.price; sub+=t;
-    html+=`<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
-    <b>${i.name}</b>
-    <div>${i.qty} x ₦${i.price} = ₦${t}</div></div>`;
+  let html = "";
+  let sub = 0;
+
+  cart.forEach(item=>{
+    const t = item.qty * item.price;
+    sub += t;
+    html += `<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
+      <b>${item.name}</b><br>
+      ${item.qty} x ₦${item.price} = ₦${t}
+    </div>`;
   });
-  document.getElementById("cartItems").innerHTML=html||"Cart empty";
-  document.getElementById("cartTotal").innerHTML=
-  `Subtotal ₦${sub}<br>Delivery ₦${cart.length?DELIVERY_FEE:0}<br><b>Total ₦${cart.length?sub+DELIVERY_FEE:0}</b>`;
+
+  document.getElementById("cartItems").innerHTML = html || "Cart empty";
+  document.getElementById("cartTotal").innerHTML =
+    `Subtotal ₦${sub}<br>
+     Delivery ₦${cart.length ? DELIVERY_FEE : 0}<br>
+     <b>Total ₦${cart.length ? sub + DELIVERY_FEE : 0}</b>`;
 }
 
 function closeCart(){
@@ -164,15 +169,23 @@ function closeCart(){
 }
 
 function checkoutWhatsApp(){
-  if(!cart.length) return alert("Cart is empty");
-  let msg="🧾 New Order%0A";
-  let total=0;
+  if(!cart.length){
+    alert("Cart is empty");
+    return;
+  }
+
+  let msg = "🧾 New Order%0A";
+  let total = 0;
+
   cart.forEach((item,i)=>{
-    total+=item.price*item.qty;
-    msg+=(i+1)+". "+item.name+" x"+item.qty+" ₦"+(item.price*item.qty)+"%0A";
+    total += item.price * item.qty;
+    msg += (i+1) + ". " + item.name + " x" + item.qty +
+           " ₦" + (item.price * item.qty) + "%0A";
   });
-  msg+="%0ATotal ₦"+total;
-  window.open("https://wa.me/2349030013293?text="+msg,"_blank");
+
+  msg += "%0ATotal ₦" + total;
+
+  window.open("https://wa.me/2349030013293?text=" + msg, "_blank");
 }
 
 loadProducts();
@@ -181,4 +194,3 @@ loadProducts();
 
 </body>
 </html>
-
