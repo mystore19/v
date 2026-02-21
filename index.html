@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CHI'S EMPIRE</title>
+
 <style>
 body{font-family:Arial,sans-serif;margin:0;background:#f8fafc;}
 header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
@@ -16,7 +17,7 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 .meta{font-size:.8rem;color:#64748b;}
 .price{margin:6px 0;}
 .qty-box{display:flex;align-items:center;gap:10px;margin:6px 0;}
-.qty-box button{padding:8px 12px;font-size:1rem;cursor:pointer;}
+.qty-box button{padding:6px 10px;font-size:1rem;cursor:pointer;}
 .btn{background:#25d366;color:#fff;padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
 .cart-btn{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;padding:16px 20px;border-radius:40px;border:none;z-index:200;}
 #cartSidebar{position:fixed;top:0;right:-420px;width:380px;height:100%;background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,.25);z-index:1000;transition:right .35s ease;display:flex;flex-direction:column;}
@@ -25,13 +26,11 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 #cartBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.3s;z-index:900;}
 #cartSidebar.open~#cartBackdrop{opacity:1;pointer-events:auto;}
 #checkoutBtn{width:100%;padding:14px;font-size:1.05rem;margin-top:10px;}
-@media(max-width:600px){#cartSidebar{width:100%;height:85%;bottom:-100%;top:auto;right:0;border-radius:16px 16px 0 0;transition:bottom .35s ease;}#cartSidebar.open{bottom:0;}}
-#toast{position:fixed;bottom:120px;right:20px;background:#25d366;color:#fff;padding:12px 18px;border-radius:8px;opacity:0;transition:.3s;}
-#toast.show{opacity:1;}
 .badge{position:absolute;top:10px;left:10px;padding:4px 8px;background:red;color:#fff;border-radius:6px;font-size:.8rem;}
 </style>
 </head>
 <body>
+
 <header>
   <h2>CHI'S EMPIRE</h2>
   <p>Store</p>
@@ -48,8 +47,8 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
 </div>
 
 <section id="catalog" class="catalog"></section>
+
 <button class="cart-btn" onclick="openCart()">🛒 Cart (<span id="cartCount">0</span>)</button>
-<div id="toast">Added to cart</div>
 
 <div id="cartSidebar">
   <div id="cartBox">
@@ -62,74 +61,64 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center;}
     <input id="custPhone" placeholder="Phone Number" style="width:100%;padding:10px;margin:6px 0">
     <input id="custAddress" placeholder="Delivery Address" style="width:100%;padding:10px;margin:6px 0">
     <input id="custCity" placeholder="City / Area" style="width:100%;padding:10px;margin:6px 0">
-    <textarea id="custNote" placeholder="Extra note (optional)" style="width:100%;padding:10px;margin:6px 0"></textarea>
 
     <button id="checkoutBtn" class="btn" onclick="checkoutWhatsApp()">Checkout on WhatsApp</button>
     <button onclick="closeCart()" style="width:100%;margin-top:8px;">Continue Shopping</button>
   </div>
 </div>
+
 <div id="cartBackdrop" onclick="closeCart()"></div>
 
 <script>
 
 const csvURL = "https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/2PACX-1vSU7G-P1I6LZ7x2-2WDWkEHOpglxXTy8yk82pzMgZ4wt903OsbFOkx42ijOrVw4WJmP_9Y8c499Z-EF/pub?output=csv";
 
-async function loadProducts() {
-  try {
-    const response = await fetch(csvURL);
-    const data = await response.text();
+let products = [];
+let cart = [];
+let qty = [];
+const DELIVERY_FEE = 1500;
 
-    console.log("CSV Loaded:", data);
+async function loadProducts(){
+  try{
+    const res = await fetch(csvURL);
+    const text = await res.text();
+    const rows = text.trim().split("\n").slice(1);
 
-    const rows = data.split("\n").slice(1);
-    const container = document.getElementById("productContainer");
-    container.innerHTML = "";
-
-    rows.forEach(row => {
+    rows.forEach(row=>{
       const cols = row.split(",");
-      if (cols.length > 1) {
-        container.innerHTML += `
-          <div class="product">
-            <img src="${cols[8]}" width="150">
-            <h3>${cols[1]}</h3>
-            <p>₦${cols[4]}</p>
-          </div>
-        `;
-      }
+      products.push({
+        name: cols[1],
+        category: cols[2],
+        brand: cols[3],
+        price: parseInt(cols[4]),
+        image: cols[8]
+      });
+      qty.push(1);
     });
 
-  } catch (error) {
-    console.error("Error loading CSV:", error);
+    render(products);
+
+  }catch(err){
+    console.error("CSV Load Error:",err);
   }
 }
 
-loadProducts();
-
-</script>
-
 function render(list){
+  const catalog = document.getElementById("catalog");
   catalog.innerHTML="";
   list.forEach((p,i)=>{
-    let badge="";
-    let outOfStock = Object.values(p.stock).every(s=>s===0);
-    if(outOfStock) badge="Out of Stock";
-    else if(Math.min(...Object.values(p.stock))<=3) badge="Low Stock";
-    let price = p.discount||p.price;
     catalog.innerHTML+=`
       <div class="product">
-        ${badge?`<div class="badge">${badge}</div>`:""}
         <img src="${p.image}">
         <h3>${p.name}</h3>
         <div class="meta">${p.brand} • ${p.category}</div>
-        <div>Color: ${p.colors.join(", ")}</div>
-        <div>Size: ${p.sizes.join(", ")}</div>
-        <div class="price"><b>₦${price}</b></div>
+        <div class="price"><b>₦${p.price}</b></div>
         <div class="qty-box">
           <button onclick="chg(${i},-1)">➖</button>
           <span id="q${i}">${qty[i]}</span>
           <button onclick="chg(${i},1)">➕</button>
         </div>
-        <button class="btn" onclick="add('${p.name}',${price},${i})" ${outOfStock?"disabled":""}>Add to Cart</button>
+        <button class="btn" onclick="add(${i})">Add to Cart</button>
       </div>`;
   });
 }
@@ -140,75 +129,55 @@ function filterProducts(){
   render(products.filter(p=>p.name.toLowerCase().includes(s)&&(c=="all"||p.category==c)));
 }
 
-function chg(i,d){ qty[i]+=d; if(qty[i]<1) qty[i]=1; document.getElementById("q"+i).innerText=qty[i]; }
+function chg(i,d){
+  qty[i]+=d;
+  if(qty[i]<1) qty[i]=1;
+  document.getElementById("q"+i).innerText=qty[i];
+}
 
-function add(name,price,i){
-  const f=cart.find(x=>x.name==name); if(f) f.qty+=qty[i]; else cart.push({name,price,qty:qty[i]}); qty[i]=1; document.getElementById("q"+i).innerText=1;
-  cartCount.innerText=cart.length; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"),1200);
+function add(i){
+  const p=products[i];
+  const found=cart.find(x=>x.name==p.name);
+  if(found) found.qty+=qty[i];
+  else cart.push({name:p.name,price:p.price,qty:qty[i]});
+  qty[i]=1;
+  document.getElementById("q"+i).innerText=1;
+  document.getElementById("cartCount").innerText=cart.length;
 }
 
 function openCart(){
-  cartSidebar.classList.add("open"); let html="", sub=0;
-  cart.forEach((i,n)=>{ const t=i.qty*i.price; sub+=t; html+=`<div style="border-bottom:1px solid #e5e7eb;padding:8px 0"><b>${i.name}</b><div style="display:flex;gap:8px;align-items:center"><button onclick="mod(${n},-1)">➖</button>${i.qty}<button onclick="mod(${n},1)">➕</button><span style="margin-left:auto">₦${t}</span><button onclick="del(${n})">❌</button></div></div>`; });
-  cartItems.innerHTML=html||"<p>Cart empty</p>";
-  cartTotal.innerHTML=`Subtotal ₦${sub}<br>Delivery ₦${cart.length?DELIVERY_FEE:0}<br><b>Total ₦${cart.length?sub+DELIVERY_FEE:0}</b>`;
+  document.getElementById("cartSidebar").classList.add("open");
+  let html="",sub=0;
+  cart.forEach((i,n)=>{
+    const t=i.qty*i.price; sub+=t;
+    html+=`<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
+    <b>${i.name}</b>
+    <div>${i.qty} x ₦${i.price} = ₦${t}</div></div>`;
+  });
+  document.getElementById("cartItems").innerHTML=html||"Cart empty";
+  document.getElementById("cartTotal").innerHTML=
+  `Subtotal ₦${sub}<br>Delivery ₦${cart.length?DELIVERY_FEE:0}<br><b>Total ₦${cart.length?sub+DELIVERY_FEE:0}</b>`;
 }
 
-function mod(i,d){ cart[i].qty+=d; if(cart[i].qty<=0) cart.splice(i,1); openCart(); }
-function del(i){ cart.splice(i,1); openCart(); }
-function closeCart(){ cartSidebar.classList.remove("open"); }
+function closeCart(){
+  document.getElementById("cartSidebar").classList.remove("open");
+}
 
 function checkoutWhatsApp(){
-
   if(!cart.length) return alert("Cart is empty");
-
-  if(!custName.value || !custPhone.value || !custAddress.value || !custCity.value){
-    return alert("Fill delivery details");
-  }
-
-  cart.forEach(item => {
-
-    fetch("https://docs.google.com/forms/d/e/1FAIpQLScH9MYQZWLDLs7AO4D5a9RjQSuLR74KM83VrKEsUhfCb-c55Q/formResponse", {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body:
-        "entry.111=" + encodeURIComponent(item.name) +
-        "&entry.222=" + encodeURIComponent(item.color || "Default") +
-        "&entry.333=" + encodeURIComponent(item.size || "Default") +
-        "&entry.444=" + item.qty +
-        "&entry.555=" + encodeURIComponent(custName.value) +
-        "&entry.666=" + encodeURIComponent(custPhone.value) +
-        "&entry.777=" + encodeURIComponent(custAddress.value) +
-        "&entry.888=" + encodeURIComponent(custCity.value)
-    });
-
-  });
-
-  let msg = "🧾 New Order%0A";
-  let total = 0;
-
+  let msg="🧾 New Order%0A";
+  let total=0;
   cart.forEach((item,i)=>{
-    total += item.price * item.qty;
-    msg += (i+1)+". "+item.name+" x"+item.qty+" ₦"+(item.price*item.qty)+"%0A";
+    total+=item.price*item.qty;
+    msg+=(i+1)+". "+item.name+" x"+item.qty+" ₦"+(item.price*item.qty)+"%0A";
   });
-
-  msg += "%0ATotal ₦"+total;
-
+  msg+="%0ATotal ₦"+total;
   window.open("https://wa.me/2349030013293?text="+msg,"_blank");
-
-  cart=[];
-  cartCount.innerText=0;
-  closeCart();
 }
-</script><div id="productContainer"></div>
+
+loadProducts();
+
+</script>
+
 </body>
 </html>
-
-
-
-
-
-
